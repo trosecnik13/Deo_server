@@ -55,7 +55,9 @@ server.on('connection', function(socket) {
       var idVarny = msg.split("$")[3]
       var idTabelu = msg.split("$")[4]
 
-      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) < getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "weed" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === true) {
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) < getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "weed" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === true && db_users.get(`${username}.inventory.seminka`) > 0) {
+        db_users.set(`${username}.inventory.seminka`, db_users.get(`${username}.inventory.seminka`)-1)
+
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.start`, getTimestamp())
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, getTimestamp()+10)
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, false)
@@ -95,8 +97,19 @@ server.on('connection', function(socket) {
         socket.send(`loadmap$${checkUnlockedHood(db_users.get(`${username}.respect`))}$${db_users.get(`${username}.money`)}$${db_users.get(`${username}.respect`)}`)
     }
     else if (msg.startsWith("inventory") && Auth(username, password)) {
-      console.log("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroine`))
-      socket.send("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroine`))
+      console.log("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroine`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
+      socket.send("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroine`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
+    }
+    else if (msg.startsWith("buy") && Auth(username, password)) {
+      var zbozi_id = msg.split("$")[3]
+      if (Buy(zbozi_id, username) === true) {
+        console.log("successfull")
+        socket.send("successfull")
+      }
+      else {
+        console.log("error 0x03")
+        socket.send("error 0x03")
+      }
     }
     else {
       console.log("Current timestamp: " + getTimestamp())
@@ -147,6 +160,188 @@ function between(min, max) {
   )
 }
 
+function Buy(IDzbozi, username) {
+  if (IDzbozi === "1") {
+    if (db_users.get(`${username}.money`) >= 100) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-100)
+
+      db_users.set(`${username}.inventory.seminka`, db_users.get(`${username}.inventory.seminka`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "2") {
+    if (db_users.get(`${username}.inventory.hnuj`) === 0) {
+      if (db_users.get(`${username}.money`) >= 50) {
+        db_users.set(`${username}.money`, db_users.get(`${username}.money`)-50)
+  
+        db_users.set(`${username}.inventory.hnuj`, db_users.get(`${username}.inventory.hnuj`)+1)
+  
+        return true
+      }   
+    }
+    else if (db_users.get(`${username}.inventory.hnuj`) === 1) {
+      if (db_users.get(`${username}.money`) >= 5000) {
+        db_users.set(`${username}.money`, db_users.get(`${username}.money`)-5000)
+  
+        db_users.set(`${username}.inventory.hnuj`, db_users.get(`${username}.inventory.hnuj`)+1)
+  
+        return true
+      }   
+    }
+    else if (db_users.get(`${username}.inventory.hnuj`) === 2) {
+      if (db_users.get(`${username}.money`) >= 50000) {
+        db_users.set(`${username}.money`, db_users.get(`${username}.money`)-50000)
+  
+        db_users.set(`${username}.inventory.hnuj`, db_users.get(`${username}.inventory.hnuj`)+1)
+  
+        return true
+      }   
+    }
+    else {
+      console.log("error 0x04")
+      return false;
+    }
+  }
+  else if (IDzbozi === "3") {
+    if (db_users.get(`${username}.money`) >= 4000) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-4000)
+
+      db_users.set(`${username}.inventory.varna`, db_users.get(`${username}.inventory.varna`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "4") {
+    if (db_users.get(`${username}.money`) >= 100) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-100)
+
+      db_users.set(`${username}.inventory.aceton`, db_users.get(`${username}.inventory.aceton`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "5") {
+    if (db_users.get(`${username}.money`) >= 80) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-80)
+
+      db_users.set(`${username}.inventory.hydroxid`, db_users.get(`${username}.inventory.hydroxid`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "6") {
+    if (db_users.get(`${username}.money`) >= 95) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-95)
+
+      db_users.set(`${username}.inventory.chlorovodikova`, db_users.get(`${username}.inventory.chlorovodikova`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "7") {
+    if (db_users.get(`${username}.money`) >= 370) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-370)
+
+      db_users.set(`${username}.inventory.ether`, db_users.get(`${username}.inventory.ether`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "8") {
+    if (db_users.get(`${username}.money`) >= 2000) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-2000)
+
+      db_users.set(`${username}.inventory.efedrin`, db_users.get(`${username}.inventory.efedrin`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "9") {
+    if (db_users.get(`${username}.money`) >= 1000) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-1000)
+
+      db_users.set(`${username}.inventory.varic`, db_users.get(`${username}.inventory.varic`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "10") {
+    if (db_users.get(`${username}.money`) >= 120) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-120)
+
+      db_users.set(`${username}.inventory.chloroform`, db_users.get(`${username}.inventory.chloroform`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "11") {
+    if (db_users.get(`${username}.money`) >= 50) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-50)
+
+      db_users.set(`${username}.inventory.uhlicitan`, db_users.get(`${username}.inventory.uhlicitan`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "12") {
+    if (db_users.get(`${username}.money`) >= 150) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-150)
+
+      db_users.set(`${username}.inventory.aktivniuhli`, db_users.get(`${username}.inventory.aktivniuhli`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else if (IDzbozi === "13") {
+    if (db_users.get(`${username}.money`) >= 100) {
+      db_users.set(`${username}.money`, db_users.get(`${username}.money`)-100)
+
+      db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.alkohol`)+1)
+
+      return true
+    }    
+    else {
+      return false
+    }
+  }
+  else {
+    return false
+  }
+}
 
 function checkUnlockedHood(respekt) {
   if (respekt > 0 && respekt < 50) {
