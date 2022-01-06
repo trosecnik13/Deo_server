@@ -10,6 +10,7 @@ Array.prototype.remove = removeValue;*/
 const db_users = new Database("/root/Demeter/db/users.json", {});
 const db_varny = new Database("/root/Demeter/db/varny.json", {});
 const db_config = new Database("/root/Demeter/db/config.json", {});
+const db_hoods = new Database("/root/Demeter/db/hoods.json", {});
 
 const port = 6988
 
@@ -19,6 +20,7 @@ const server = new WebSocket.Server({
 
 console.log(`\x1b[33mServer running on port ${port}\x1b[0m`)
 
+setInterval(checkMidnight, 1000);
 
 let sockets = [];
 
@@ -82,6 +84,16 @@ server.on('connection', function(socket) {
 
         var sklizeno = between(40,50)
 
+        if (db_users.get(`${username}.inventory.hnuj`) === 1) {
+          sklizeno = parseInt((sklizeno * 1.25).toFixed(0))
+        }
+        else if (db_users.get(`${username}.inventory.hnuj`) === 2) {
+          sklizeno = parseInt((sklizeno * 1.5).toFixed(0))
+        }
+        else if (db_users.get(`${username}.inventory.hnuj`) === 3) {
+          sklizeno = parseInt((sklizeno * 1.75).toFixed(0))
+        }
+        
         db_users.set(`${username}.inventory.weed`, db_users.get(`${username}.inventory.weed`)+sklizeno)
 
         console.log(`weedharvest$${sklizeno}`)
@@ -97,26 +109,87 @@ server.on('connection', function(socket) {
         socket.send(`loadmap$${checkUnlockedHood(db_users.get(`${username}.respect`))}$${db_users.get(`${username}.money`)}$${db_users.get(`${username}.respect`)}`)
     }
     else if (msg.startsWith("inventory") && Auth(username, password)) {
-      console.log("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroine`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
-      socket.send("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroine`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
+      console.log("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
+      socket.send("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
     }
     else if (msg.startsWith("buy") && Auth(username, password)) {
       var zbozi_id = msg.split("$")[3]
       if (Buy(zbozi_id, username) === true) {
-        console.log("successfull")
-        socket.send("successfull")
+        console.log("successful")
+        socket.send("successful")
       }
       else {
         console.log("error 0x03")
         socket.send("error 0x03")
       }
     }
+    else if (msg.startsWith("changetable") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+      var drug = msg.split("$")[5]
+
+      if (db_varny.get(`${username}.varna${idVarny}`) !== undefined && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === true) {
+        if (drug === "weed") {
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.type`, "weed")
+          
+          console.log("successful")
+          socket.send("successful")
+        }
+        else if (drug === "meth" && db_users.get(`${username}.inventory.varna`) > 0) {
+          db_users.set(`${username}.inventory.varna`, db_users.get(`${username}.inventory.varna`)-1)
+
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.type`, "meth")
+
+          console.log("successful")
+          socket.send("successful")
+        }
+        else if (drug === "heroin" && db_users.get(`${username}.inventory.varic`) > 0) {
+          db_users.set(`${username}.inventory.varic`, db_users.get(`${username}.inventory.varic`)-1)
+
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.type`, "heroin")
+
+          console.log("successful")
+          socket.send("successful")
+        }
+        else {
+          console.log("error 0x05")
+          socket.send("error 0x05")
+        }
+      }
+      else {
+        console.log("error 0x05")
+        socket.send("error 0x05")
+      }
+    }
+    else if (msg.startsWith("registration")) {
+      if (db_users.get(`${username}`) === undefined && password.length === 64) {
+
+
+		db_hoods.set(`${username}`, db_config.get("default_objects.hoods"));
+		db_varny.set(`${username}`, db_config.get("default_objects.varny"));
+		db_users.set(`${username}`, db_config.get("default_objects.user"));
+		
+		db_users.set(`${username}.password`, `${password}`)
+		
+        db_config.push("listOfUsers", `${username}`)
+
+        console.log("successful")
+        socket.send("successful")
+      }
+      else {
+        console.log("error 0x06")
+        socket.send("error 0x06")
+      }
+    }
+    else if (msg.startsWith("login") && Auth(username, password)) {
+      console.log("successful")
+      socket.send("successful")
+    }
     else {
       console.log("Current timestamp: " + getTimestamp())
       console.log("Message sended: error 0x01")
       socket.send("error 0x01");
     }
-
 
   });
 
@@ -131,6 +204,20 @@ server.on('connection', function(socket) {
   });*/
 });
 
+async function checkMidnight() {
+  if(getTimestamp() === db_config.get("nextMidnight")) {
+	console.log("je pulnoc xd")
+	db_config.set("nextMidnight", db_config.get("nextMidnight")+86400) //zmeni pulnoc na dalsi pulnoc
+  }
+}
+
+function ChangePoptavka(username) {
+	for (var hood=0;hood<=13;hood++) {
+		db_hoods.set(`${username}.${hood}.weed`, 10*between(0.5,3))
+		db_hoods.set(`${username}.${hood}.meth`, 5*between(0.5,3))
+		db_hoods.set(`${username}.${hood}.heroin`, 7.5*between(0.5,3))
+	}
+}
 
 function getTimestamp() {
   return Math.floor(Date.now()/1000) 
