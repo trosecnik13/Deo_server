@@ -7,10 +7,10 @@ const rp = require("request-promise");
 /*const removeValue = require('remove-value');
 Array.prototype.remove = removeValue;*/
 
-const db_users = new Database("/root/Demeter/db/users.json", {});
-const db_varny = new Database("/root/Demeter/db/varny.json", {});
-const db_config = new Database("/root/Demeter/db/config.json", {});
-const db_hoods = new Database("/root/Demeter/db/hoods.json", {});
+const db_users = new Database("/Demeter/db/users.json", {});
+const db_varny = new Database("/Demeter/db/varny.json", {});
+const db_config = new Database("/Demeter/db/config.json", {});
+const db_hoods = new Database("/Demeter/db/hoods.json", {});
 
 const port = 6988
 
@@ -46,8 +46,13 @@ server.on('connection', function(socket) {
 
       var answer = "loadinterior$"
 
-      for (var i=1; i<=pocet_tablu; i++) {
-        answer = answer + db_varny.get(`${username}.varna${idVarny}.table${i}.type`) + "$" + db_varny.get(`${username}.varna${idVarny}.table${i}.stop`) + "$"
+      if (db_varny.get(`${username}.varna${idVarny}`) === undefined) {
+        console.log("swag")
+      }
+      else {
+        for (var i=1; i<=pocet_tablu; i++) {
+          answer = answer + db_varny.get(`${username}.varna${idVarny}.table${i}.type`) + "$" + db_varny.get(`${username}.varna${idVarny}.table${i}.stop`) + "$"
+        }
       }
 
       console.log(answer)
@@ -109,8 +114,8 @@ server.on('connection', function(socket) {
         socket.send(`loadmap$${checkUnlockedHood(db_users.get(`${username}.respect`))}$${db_users.get(`${username}.money`)}$${db_users.get(`${username}.respect`)}`)
     }
     else if (msg.startsWith("inventory") && Auth(username, password)) {
-      console.log("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
-      socket.send("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$ $" + db_users.get(`${username}.inventory.alkohol`))
+      console.log("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$" + db_users.get(`${username}.inventory.aktivniuhli`) + "$" + db_users.get(`${username}.inventory.alkohol`))
+      socket.send("inventory$" + db_users.get(`${username}.inventory.weed`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_users.get(`${username}.inventory.seminka`) + "$" + db_users.get(`${username}.inventory.hnuj`) + "$" + db_users.get(`${username}.inventory.varna`) + "$" + db_users.get(`${username}.inventory.aceton`) + "$" + db_users.get(`${username}.inventory.hydroxid`) + "$" + db_users.get(`${username}.inventory.chlorovodikova`) + "$" + db_users.get(`${username}.inventory.ether`) + "$" + db_users.get(`${username}.inventory.efedrin`) + "$" + db_users.get(`${username}.inventory.varic`) + "$" + db_users.get(`${username}.inventory.chloroform`) + "$" + db_users.get(`${username}.inventory.uhlicitan`) + "$" + db_users.get(`${username}.inventory.aktivniuhli`) + "$" + db_users.get(`${username}.inventory.alkohol`))
     }
     else if (msg.startsWith("buy") && Auth(username, password)) {
       var zbozi_id = msg.split("$")[3]
@@ -184,6 +189,49 @@ server.on('connection', function(socket) {
     else if (msg.startsWith("login") && Auth(username, password)) {
       console.log("successful")
       socket.send("successful")
+    }
+    else if (msg.startsWith("getservertimestamp") && Auth(username, password)) {
+      console.log(getTimestamp())
+      socket.send(getTimestamp())
+    }
+    else if (msg.startsWith("hood") && Auth(username, password)) {
+      idHoodu = msg.split("$")[3]
+
+      if (checkUnlockedHood(db_users.get(`${username}.respect`)) >= parseInt(idHoodu)) {
+        var answer = "hood$" + db_hoods.get(`${username}.${idHoodu}.weed_poptavka`) + "$" + db_hoods.get(`${username}.${idHoodu}.weed_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.meth_poptavka`) + "$" + db_hoods.get(`${username}.${idHoodu}.meth_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.heroin_poptavka`) + "$" + db_hoods.get(`${username}.${idHoodu}.heroin_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer1`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2`) + "$" + idHoodu;
+      
+        console.log(answer)
+        socket.send(answer)
+      }
+      else {
+        console.log("error 0x07")
+        socket.send("error 0x07")
+      }
+    }
+    else if (msg.startsWith("showdealers") && Auth(username, password)) {
+      idHoodu = msg.split("$")[3]
+
+      if (checkUnlockedHood(db_users.get(`${username}.respect`)) >= parseInt(idHoodu)) {
+        
+        var dealer1 = between(1, 5)
+        var dealer2 = between(1, 5)
+        var dealer3 = between(1, 5)
+
+        while (dealer2 === dealer1) {
+          dealer2 = between(1,5)
+        }
+
+        while (dealer3 === dealer2 || dealer3 === dealer1) {
+          dealer3 = between(1,5)
+        }
+
+        socket.send(`showdealers$${dealer1}$${dealer2}$${dealer3}`)
+        console.log(`showdealers$${dealer1}$${dealer2}$${dealer3}`)
+      }
+      else {
+        console.log("error 0x08")
+        socket.send("error 0x08")
+      }
     }
     else {
       console.log("Current timestamp: " + getTimestamp())
@@ -431,7 +479,7 @@ function Buy(IDzbozi, username) {
 }
 
 function checkUnlockedHood(respekt) {
-  if (respekt > 0 && respekt < 50) {
+  if (respekt >= 0 && respekt < 50) {
     return 1
   }
   else if (respekt >= 50 && respekt < 200) {
