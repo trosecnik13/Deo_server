@@ -179,11 +179,11 @@ server.on('connection', function(socket) {
       if (db_users.get(`${username}`) === undefined && password.length === 64) {
 
 
-		db_hoods.set(`${username}`, db_config.get("default_objects.hoods"));
-		db_varny.set(`${username}`, db_config.get("default_objects.varny"));
-		db_users.set(`${username}`, db_config.get("default_objects.user"));
+		    db_hoods.set(`${username}`, db_config.get("default_objects.hoods"));
+		    db_varny.set(`${username}`, db_config.get("default_objects.varny"));
+		    db_users.set(`${username}`, db_config.get("default_objects.user"));
 		
-		db_users.set(`${username}.password`, `${password}`)
+		    db_users.set(`${username}.password`, `${password}`)
 		
         db_config.push("listOfUsers", `${username}`)
 
@@ -207,7 +207,7 @@ server.on('connection', function(socket) {
       idHoodu = msg.split("$")[3]
 
       if (checkUnlockedHood(db_users.get(`${username}.respect`)) >= parseInt(idHoodu)) {
-        var answer = "hood$" + db_hoods.get(`${username}.${idHoodu}.weed_poptavka`) + "$" + db_hoods.get(`${username}.${idHoodu}.weed_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.meth_poptavka`) + "$" + db_hoods.get(`${username}.${idHoodu}.meth_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.heroin_poptavka`) + "$" + db_hoods.get(`${username}.${idHoodu}.heroin_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer1`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2`) + "$" + idHoodu;
+        var answer = "hood$" + db_users.get(`${username}.inventory.weed`) + "$" + db_hoods.get(`${username}.${idHoodu}.weed_cena`) + "$" + db_users.get(`${username}.inventory.meth`) + "$" + db_hoods.get(`${username}.${idHoodu}.meth_cena`) + "$" + db_users.get(`${username}.inventory.heroin`) + "$" + db_hoods.get(`${username}.${idHoodu}.heroin_cena`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer1`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2`) + "$" + idHoodu;
       
         console.log(answer)
         socket.send(answer)
@@ -279,7 +279,7 @@ server.on('connection', function(socket) {
       zboziType = msg.split("$")[5]
       zboziAmount = msg.split("$")[6]
 
-      var dealer_pole = db_dealeri.get(`${idHoodu}.${dealerCislo}.drugs`)
+      var dealer_pole = db_dealeri.get(`${idHoodu}.${db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`)}.drugs`)
 
       if (db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`) !== "0" && db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}_info.amount`) === 0 && dealer_pole.includes(`${zboziType}`)) {
         if (db_users.get(`${username}.inventory.${zboziType}`) >= parseInt(zboziAmount)) {
@@ -287,18 +287,14 @@ server.on('connection', function(socket) {
             db_users.set(`${username}.inventory.${zboziType}`, db_users.get(`${username}.inventory.${zboziType}`)-parseInt(zboziAmount))
             db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.amount`, parseInt(zboziAmount))
             db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.startTimestamp`, getTimestamp())
-
-            var endTimestamp = getTimestamp()+parseInt((db_dealeri.get(`${idHoodu}.${db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`)}.selling_amount`) / parseInt(zboziAmount))*3600)
-
+            var endTimestamp = getTimestamp()+parseInt((parseInt(zboziAmount) / db_dealeri.get(`${idHoodu}.${db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`)}.selling_amount`))*3600)
             db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.endTimestamp`, endTimestamp)
-
             var profit = parseInt((db_hoods.get(`${username}.${idHoodu}.${zboziType}_cena`)*parseInt(zboziAmount))-parseInt(((db_hoods.get(`${username}.${idHoodu}.${zboziType}_cena`)*parseInt(zboziAmount))*db_dealeri.get(`${idHoodu}.${db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`)}.profit_cut`))/100))
-
             db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.profit`, profit)
-  
+
             console.log(`sendtodealer$${endTimestamp}`)
             socket.send(`sendtodealer$${endTimestamp}`)
-          }
+          } 
           else {
             console.log("error 0x0D")
             socket.send("error 0x0D")
@@ -314,10 +310,61 @@ server.on('connection', function(socket) {
         socket.send("error 0x0B")
       }
     }
+    else if (msg.startsWith("takeprofit") && Auth(username, password)) {
+      idHoodu = msg.split("$")[3]
+      dealerCislo = msg.split("$")[4]
+
+      if (db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`) !== "0") {
+          if (db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}_info.amount`) !== 0) {
+            if (db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}_info.endTimestamp`) < getTimestamp()) {
+
+              db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.amount`, 0)
+              db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.startTimestamp`, 0)
+              db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.endTimestamp`, 0)
+
+              var profit = db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}_info.profit`)
+              db_hoods.set(`${username}.${idHoodu}.dealer${dealerCislo}_info.profit`, 0)
+
+              if (between(1,100) <= db_dealeri.get(`${idHoodu}.${db_hoods.get(`${username}.${idHoodu}.dealer${dealerCislo}`)}.police_chance`)) {
+                console.log("chytli tě benga")
+                socket.send("chytli tě benga")
+              }
+              else {
+                db_users.set(`${username}.money`, db_users.get(`${username}.money`)+profit)
+
+                console.log(`takeprofit$${profit}`)
+                socket.send(`takeprofit$${profit}`)
+              }
+            }
+            else {
+              console.log("error 0x10")
+              socket.send("error 0x10")
+            }
+          }
+          else {
+            console.log("error 0x0F")
+            socket.send("error 0x0F")
+          }
+      }
+      else {
+        console.log("error 0x0E")
+        socket.send("error 0x0E")
+      }
+    }
     else if (msg.startsWith("loaddealers") && Auth(username, password)) {
       idHoodu = msg.split("$")[3]
 
-      var answer = "loaddealers$" + db_hoods.get(`${username}.${idHoodu}.dealer1_info.amount`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer1_info.startTimestamp`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer1_info.endTimestamp`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer1_info.profit`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2_info.amount`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2_info.startTimestamp`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2_info.endTimestamp`) + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2_info.profit`)
+      var dealer1prodaneMnozstvi = 0
+      var dealer2prodaneMnozstvi = 0
+
+      if (db_hoods.get(`${username}.${idHoodu}.dealer1_info.amount`) !== 0) {
+        dealer1prodaneMnozstvi = parseInt(((db_hoods.get(`${username}.${idHoodu}.dealer1_info.amount`)*(db_hoods.get(`${username}.${idHoodu}.dealer1_info.endTimestamp`)-getTimestamp()))/(db_hoods.get(`${username}.${idHoodu}.dealer1_info.endTimestamp`)-db_hoods.get(`${username}.${idHoodu}.dealer1_info.startTimestamp`))))
+      }
+      if (db_hoods.get(`${username}.${idHoodu}.dealer2_info.amount`) !== 0) {
+        dealer2prodaneMnozstvi = parseInt(((db_hoods.get(`${username}.${idHoodu}.dealer2_info.amount`)*(db_hoods.get(`${username}.${idHoodu}.dealer2_info.endTimestamp`)-getTimestamp()))/(db_hoods.get(`${username}.${idHoodu}.dealer2_info.endTimestamp`)-db_hoods.get(`${username}.${idHoodu}.dealer2_info.startTimestamp`))))
+      }
+
+      var answer = "loaddealers$" + db_hoods.get(`${username}.${idHoodu}.dealer1_info.amount`) + "$" + (db_hoods.get(`${username}.${idHoodu}.dealer1_info.endTimestamp`)-getTimestamp()) + "$" + dealer1prodaneMnozstvi + "$" + db_hoods.get(`${username}.${idHoodu}.dealer2_info.amount`) + "$" + (db_hoods.get(`${username}.${idHoodu}.dealer2_info.endTimestamp`)-getTimestamp())  + "$" + dealer2prodaneMnozstvi
     
       console.log(answer)
       socket.send(answer)
@@ -351,16 +398,16 @@ async function checkMidnight() {
   users_array.forEach(user => {
     for (var hood=1;hood<=13;hood++) {
 
-      var weed_poptavka = 10*((random.float((min = 0.5),(max = 3))).toFixed(1))
+      var weed_poptavka = 1*((random.float((min = 0.5),(max = 1.5))).toFixed(1))
       db_hoods.set(`${user}.${hood}.weed_poptavka`, parseInt(weed_poptavka))
-      var meth_poptavka = 10*((random.float((min = 0.5),(max = 3))).toFixed(1))
+      var meth_poptavka = 1*((random.float((min = 0.5),(max = 1.5))).toFixed(1))
       db_hoods.set(`${user}.${hood}.meth_poptavka`, parseInt(meth_poptavka))
-      var heroin_poptavka = 10*((random.float((min = 0.5),(max = 3))).toFixed(1))
+      var heroin_poptavka = 1*((random.float((min = 0.5),(max = 1.5))).toFixed(1))
       db_hoods.set(`${user}.${hood}.heroin_poptavka`, parseInt(heroin_poptavka))
 
-      db_hoods.set(`${user}.${hood}.weed_cena`, parseInt(weed_poptavka*parseInt(100*((random.float((min = 0.5),(max = 2))).toFixed(1)))))
-      db_hoods.set(`${user}.${hood}.meth_cena`, parseInt(meth_poptavka*parseInt(1000*((random.float((min = 0.5),(max = 2))).toFixed(1)))))
-      db_hoods.set(`${user}.${hood}.heroin_cena`, parseInt(heroin_poptavka*parseInt(1000*((random.float((min = 0.5),(max = 2))).toFixed(1)))))
+      db_hoods.set(`${user}.${hood}.weed_cena`, parseInt(weed_poptavka*(100*((random.float((min = 0.75),(max = 1.25))).toFixed(1)))))
+      db_hoods.set(`${user}.${hood}.meth_cena`, parseInt(meth_poptavka*(1000*((random.float((min = 0.75),(max = 1.25))).toFixed(1)))))
+      db_hoods.set(`${user}.${hood}.heroin_cena`, parseInt(heroin_poptavka*(1000*((random.float((min = 0.75),(max = 1.25))).toFixed(1)))))
     }
   });
   }
@@ -587,7 +634,7 @@ function Buy(IDzbozi, username) {
     if (db_users.get(`${username}.money`) >= 100) {
       db_users.set(`${username}.money`, db_users.get(`${username}.money`)-600)
 
-      db_users.set(`${username}.inventory.cpavek`, db_users.get(`${username}.inventory.cpakve`)+1)
+      db_users.set(`${username}.inventory.cpavek`, db_users.get(`${username}.inventory.cpavek`)+1)
 
       return true
     }    
