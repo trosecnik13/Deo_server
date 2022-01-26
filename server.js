@@ -14,6 +14,7 @@ const db_varny = new Database("/Demeter/db/varny.json", {});
 const db_config = new Database("/Demeter/db/config.json", {});
 const db_hoods = new Database("/Demeter/db/hoods.json", {});
 const db_dealeri = new Database("/Demeter/db/dealeri.json", {});
+const db_leaderboard = new Database("/Demeter/db/leaderboard.json", {});
 
 const port = 6988
 
@@ -54,7 +55,7 @@ server.on('connection', function(socket) {
       }
       else {
         for (var i=1; i<=pocet_tablu; i++) {
-          answer = answer + db_varny.get(`${username}.varna${idVarny}.table${i}.type`) + "$" + db_varny.get(`${username}.varna${idVarny}.table${i}.stop`) + "$"
+          answer = answer + db_varny.get(`${username}.varna${idVarny}.table${i}.type`) + "$" + db_varny.get(`${username}.varna${idVarny}.table${i}.stop`) + "$" + db_varny.get(`${username}.varna${idVarny}.table${i}.stage`) + "$"
         }
       }
 
@@ -89,6 +90,7 @@ server.on('connection', function(socket) {
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, getTimestamp()+10)
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, false)
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, sklizeno)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 1)
 
         console.log(`weedstart$${getTimestamp()+10}`)
         socket.send(`weedstart$${getTimestamp()+10}`)
@@ -97,7 +99,6 @@ server.on('connection', function(socket) {
         console.log("error 0x02")
         socket.send("error 0x02")
       }
-
     }
     else if (msg.startsWith("weedharvest") && Auth(username, password)) {
       var idVarny = msg.split("$")[3]
@@ -107,11 +108,14 @@ server.on('connection', function(socket) {
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, true)
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, 0)
         db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.start`, 0)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 0)
         
         db_users.set(`${username}.inventory.weed`, db_users.get(`${username}.inventory.weed`)+db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`))
 
         console.log(`weedharvest$${db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)}`)
         socket.send(`weedharvest$${db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)}`)
+
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, 0)
       }
       else {
         console.log("error 0x03")
@@ -175,7 +179,7 @@ server.on('connection', function(socket) {
         socket.send("error 0x05")
       }
     }
-    else if (msg.startsWith("registration")) {
+    else if (msg.startsWith("registrationswag")) {
       if (db_users.get(`${username}`) === undefined && password.length === 64) {
 
 
@@ -294,6 +298,8 @@ server.on('connection', function(socket) {
 
             console.log(`sendtodealer$${endTimestamp}`)
             socket.send(`sendtodealer$${endTimestamp}`)
+
+            UpdateLeaderboard(username, `most_${zboziType}_sold`, zboziAmount);
           } 
           else {
             console.log("error 0x0D")
@@ -369,6 +375,205 @@ server.on('connection', function(socket) {
       console.log(answer)
       socket.send(answer)
     }
+    else if (msg.startsWith("methstart") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+      var minigameResult = msg.split("$")[5]
+
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) < getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "meth" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === true) {
+        if (db_users.get(`${username}.inventory.efedrin`) >= 1 && db_users.get(`${username}.inventory.aceton`) >= 1 && db_users.get(`${username}.inventory.ether`) >= 1 && db_users.get(`${username}.inventory.chlorovodikova`) >= 1 && db_users.get(`${username}.inventory.hydroxid`) >= 1) {
+          
+          var sklizeno = between(10,20)
+
+          sklizeno = parseInt(sklizeno - (-2*parseInt(minigameResult)))
+  
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.start`, getTimestamp())
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, getTimestamp()+10)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, false)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, sklizeno)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 1)
+          
+          db_users.set(`${username}.inventory.efedrin`, db_users.get(`${username}.inventory.efedrin`)-1)
+          db_users.set(`${username}.inventory.aceton`, db_users.get(`${username}.inventory.aceton`)-1)
+          db_users.set(`${username}.inventory.ether`, db_users.get(`${username}.inventory.ether`)-1)
+          db_users.set(`${username}.inventory.hydroxid`, db_users.get(`${username}.inventory.hydroxid`)-1)
+          db_users.set(`${username}.inventory.chlorovodikova`, db_users.get(`${username}.inventory.chlorovodikova`)-1)
+  
+          console.log(`methstart$${getTimestamp()+10}`)
+          socket.send(`methstart$${getTimestamp()+10}`)
+        }
+        else {
+          console.log("error 0x12")
+          socket.send("error 0x12")
+        }
+      }
+      else {
+        console.log("error 0x11")
+        socket.send("error 0x11")
+      }
+    }
+    else if (msg.startsWith("methcontinue") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+      var minigameResult = msg.split("$")[5]
+
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "meth" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) <= getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stage`) === 1) {
+
+        if (db_users.get(`${username}.inventory.alkohol`) >= 1) {
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, getTimestamp()+10)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 2)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)*parseInt(minigameResult))
+          
+          db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.alkohol`)-1)
+        
+          console.log(`methcontinue$${getTimestamp()+10}`)
+          socket.send(`methcontinue$${getTimestamp()+10}`)
+        }
+        else {
+          console.log("error 0x15")
+          socket.send("error 0x15")
+        }
+      }
+      else {
+        console.log("error 0x13")
+        socket.send("error 0x13")
+      }
+    }
+    else if (msg.startsWith("methharvest") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === false && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) < getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "meth" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stage`) === 2) {
+       
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, true)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, 0)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.start`, 0)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 0)
+        
+        db_users.set(`${username}.inventory.meth`, db_users.get(`${username}.inventory.meth`)+db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`))
+
+        console.log(`methharvest$${db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)}`)
+        socket.send(`methharvest$${db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)}`)
+
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, 0)
+      }
+      else {
+        console.log("error 0x14")
+        socket.send("error 0x14")
+      }
+    }
+    else if (msg.startsWith("makoviceharvest") && Auth(username, password)) {
+      if (db_users.get(`${username}.poleTimeout`) < getTimestamp()) {
+        var sklizeno = between(10,50)
+
+        db_users.set(`${username}.inventory.makovice`, db_users.get(`${username}.inventory.makovice`)+sklizeno)
+      }
+      else {
+        console.log("error 0x16")
+        socket.send("error 0x16")
+      }
+    }
+    else if (msg.startsWith("poleupgrade") && Auth(username, password)) {
+      var newLevel = UpgradePole(username);
+
+      if (newLevel !== 0) {
+        console.log(`poleupgrade$${newlevel}`)
+        socket.send(`poleupgrade$${newLevel}`)
+      }
+      else {
+        console.log("error 0x17")
+        socket.send("error 0x17")
+      }
+    }
+    else if (msg.startsWith("heroinstart") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+      var minigameResult = msg.split("$")[5]
+
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) < getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "heroin" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === true) {
+        if (db_users.get(`${username}.inventory.cpavek`) >= 1 && db_users.get(`${username}.inventory.vapno`) >= 1 && db_users.get(`${username}.inventory.makovice`) >= 20) {
+          
+          var sklizeno = between(10,20)
+
+          sklizeno = parseInt(sklizeno - (-2*parseInt(minigameResult)))
+  
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.start`, getTimestamp())
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, getTimestamp()+10)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, false)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, sklizeno)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 1)
+          
+          db_users.set(`${username}.inventory.efedrin`, db_users.get(`${username}.inventory.makovice`)-20)
+          db_users.set(`${username}.inventory.aceton`, db_users.get(`${username}.inventory.vapno`)-1)
+          db_users.set(`${username}.inventory.ether`, db_users.get(`${username}.inventory.cpavek`)-1)
+  
+          console.log(`heroinstart$${getTimestamp()+10}`)
+          socket.send(`heroinstart$${getTimestamp()+10}`)
+        }
+        else {
+          console.log("error 0x1A")
+          socket.send("error 0x1A")
+        }
+      }
+      else {
+        console.log("error 0x19")
+        socket.send("error 0x19")
+      }
+    }
+    else if (msg.startsWith("heroincontinue") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+      var minigameResult = msg.split("$")[5]
+
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "heroin" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) <= getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stage`) === 1) {
+
+        if (db_users.get(`${username}.inventory.ocet`) >= 1 && db_users.get(`${username}.inventory.chloroform`) >= 1 && db_users.get(`${username}.inventory.uhlicitan`) >= 1 && db_users.get(`${username}.inventory.aktivniuhli`) >= 1 && db_users.get(`${username}.inventory.alkohol`) >= 1) {
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, getTimestamp()+10)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 2)
+          db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)*parseInt(minigameResult))
+          
+          db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.alkohol`)-1)
+          db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.chloroform`)-1)
+          db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.uhlicitan`)-1)
+          db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.aktivniuhli`)-1)
+          db_users.set(`${username}.inventory.alkohol`, db_users.get(`${username}.inventory.ocet`)-1)
+        
+          console.log(`heroincontinue$${getTimestamp()+10}`)
+          socket.send(`heroincontinue$${getTimestamp()+10}`)
+        }
+        else {
+          console.log("error 0x1C")
+          socket.send("error 0x1C")
+        }
+      }
+      else {
+        console.log("error 0x1B")
+        socket.send("error 0x1B")
+      }
+    }
+    else if (msg.startsWith("heroinharvest") && Auth(username, password)) {
+      var idVarny = msg.split("$")[3]
+      var idTabelu = msg.split("$")[4]
+
+      if (db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.harvested`) === false && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stop`) < getTimestamp() && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.type`) === "heroin" && db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.stage`) === 2) {
+       
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.harvested`, true)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stop`, 0)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.start`, 0)
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.stage`, 0)
+        
+        db_users.set(`${username}.inventory.heroin`, db_users.get(`${username}.inventory.heroin`)+db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`))
+
+        console.log(`heroinharvest$${db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)}`)
+        socket.send(`heroinharvest$${db_varny.get(`${username}.varna${idVarny}.table${idTabelu}.amount`)}`)
+
+        db_varny.set(`${username}.varna${idVarny}.table${idTabelu}.amount`, 0)
+      }
+      else {
+        console.log("error 0x1D")
+        socket.send("error 0x1D")
+      }
+    }
     else {
       console.log("Current timestamp: " + getTimestamp())
       console.log("Message sended: error 0x01")
@@ -397,14 +602,6 @@ async function checkMidnight() {
 
   users_array.forEach(user => {
     for (var hood=1;hood<=13;hood++) {
-
-      var weed_poptavka = 1*((random.float((min = 0.5),(max = 1.5))).toFixed(1))
-      db_hoods.set(`${user}.${hood}.weed_poptavka`, parseInt(weed_poptavka))
-      var meth_poptavka = 1*((random.float((min = 0.5),(max = 1.5))).toFixed(1))
-      db_hoods.set(`${user}.${hood}.meth_poptavka`, parseInt(meth_poptavka))
-      var heroin_poptavka = 1*((random.float((min = 0.5),(max = 1.5))).toFixed(1))
-      db_hoods.set(`${user}.${hood}.heroin_poptavka`, parseInt(heroin_poptavka))
-
       db_hoods.set(`${user}.${hood}.weed_cena`, parseInt(weed_poptavka*(100*((random.float((min = 0.75),(max = 1.25))).toFixed(1)))))
       db_hoods.set(`${user}.${hood}.meth_cena`, parseInt(meth_poptavka*(1000*((random.float((min = 0.75),(max = 1.25))).toFixed(1)))))
       db_hoods.set(`${user}.${hood}.heroin_cena`, parseInt(heroin_poptavka*(1000*((random.float((min = 0.75),(max = 1.25))).toFixed(1)))))
@@ -698,5 +895,93 @@ function checkUnlockedHood(respekt) {
   }
   else if (respekt >= 1000000000) {
     return 13
+  }
+}
+
+function UpgradePole(username) {
+
+  var poleLevel = db_users.get(`${username}.pole`)
+  var money = db_users.get(`${username}.money`)
+
+  if (poleLevel === 1 && money >= 500) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 2;
+  }
+  else if (poleLevel === 2 && money >= 1250) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 3;
+  }
+  else if (poleLevel === 3 && money >= 2500) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 4;
+  }
+  else if (poleLevel === 4 && money >= 5000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 5;
+  }
+  else if (poleLevel === 5 && money >= 10000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 6;
+  }
+  else if (poleLevel === 6 && money >= 20000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 7;
+  }
+  else if (poleLevel === 7 && money >= 40000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 8;
+  }
+  else if (poleLevel === 8 && money >= 60000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 9;
+  }
+  else if (poleLevel === 9 && money >= 80000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 10;
+  }
+  else if (poleLevel === 10 && money >= 100000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 11;
+  }
+  else if (poleLevel === 11 && money >= 150000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 12;
+  }
+  else if (poleLevel === 12 && money >= 200000) {
+    db_users.set(`${username}.money`, db_users.get(`${username}.money`)-500)
+    db_users.set(`${username}.pole`)
+    return 13;
+  }
+  else {
+    return 0;
+  }
+}
+
+function UpdateLeaderboard(username, type, amount) {
+  try {
+
+    if (db_leaderboard.get(`${type}.${username}`) !== undefined) {
+      db_leaderboard.set(`${type}.${username}`, db_leaderboard.get(`${tpye}.${username}`)+parseInt(amount))
+    }
+    else {
+      db_leaderboard.set(`${type}.${username}`, parseInt(amount))
+    }
+    
+    return 0;
+  }
+  catch {
+    console.log("internal error :(")
+    return 1;
   }
 }
